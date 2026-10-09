@@ -9,6 +9,7 @@ import type ScreenInfo from '../ScreenInfo';
 import Size from '../Size';
 import Util from '../Util';
 import { isPointerReleaseType } from './pointerRelease';
+import { rotatedTouchPoint } from './rotatedTouch';
 
 interface Touch {
     action: number;
@@ -215,6 +216,18 @@ export abstract class InteractionHandler {
         const { width, height } = screenInfo.videoSize;
         const target: HTMLElement = event.target as HTMLElement;
         const rect = target.getBoundingClientRect();
+        if (target.closest<HTMLElement>('.device-view')?.dataset['viewRotation'] === '90') {
+            const { x, y, invalid } = rotatedTouchPoint(event.clientX, event.clientY, rect, width, height);
+            return {
+                client: { width: target.clientWidth, height: target.clientHeight },
+                touch: {
+                    invalid,
+                    action,
+                    position: new Position(new Point(x, y), new Size(width, height)),
+                    buttons: event.buttons,
+                },
+            };
+        }
         let { clientWidth, clientHeight } = target;
         let touchX = event.clientX - rect.left;
         let touchY = event.clientY - rect.top;

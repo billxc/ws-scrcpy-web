@@ -9,7 +9,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding-right: env(safe-area-inset-right, 0px);
+    padding-right: var(--stream-safe-right, env(safe-area-inset-right, 0px));
 }
 
 .stream-navigation {
@@ -44,7 +44,7 @@
     transform: translateY(-50%);
     z-index: 5;
     box-sizing: border-box;
-    width: min(320px, calc(100vw - 80px));
+    width: min(320px, calc(var(--stream-view-width, 100vw) - 80px));
     max-height: calc(90dvh - 64px);
     overflow-y: auto;
     overscroll-behavior: contain;
@@ -189,19 +189,33 @@ dialog.connect-modal .stream-fullscreen .modal-header {
 
 .stream-fullscreen .video {
     flex: 1;
-    padding-left: env(safe-area-inset-left, 0px);
+    padding-left: var(--stream-safe-left, env(safe-area-inset-left, 0px));
 }
 
 dialog.connect-modal .stream-fullscreen .video-layer,
 dialog.connect-modal .stream-fullscreen .touch-layer,
 .device-view.stream-fullscreen .video-layer,
 .device-view.stream-fullscreen .touch-layer {
-    max-width: calc(100vw - 56px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px));
-    max-height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+    max-width: calc(
+        var(--stream-view-width, 100vw) -
+        56px -
+        var(--stream-safe-left, env(safe-area-inset-left, 0px)) -
+        var(--stream-safe-right, env(safe-area-inset-right, 0px))
+    );
+    max-height: calc(
+        var(--stream-view-height, 100dvh) -
+        var(--stream-safe-top, env(safe-area-inset-top, 0px)) -
+        var(--stream-safe-bottom, env(safe-area-inset-bottom, 0px))
+    );
 }
 
 .stream-fullscreen .stream-more-panel {
-    max-height: calc(100dvh - 24px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+    max-height: calc(
+        var(--stream-view-height, 100dvh) -
+        24px -
+        var(--stream-safe-top, env(safe-area-inset-top, 0px)) -
+        var(--stream-safe-bottom, env(safe-area-inset-bottom, 0px))
+    );
 }
 
 dialog.connect-modal .modal-header-controls {
@@ -211,6 +225,46 @@ dialog.connect-modal .modal-header-controls {
 dialog.connect-modal .modal-frame:has(.compact-toolbar),
 dialog.connect-modal .modal-body:has(.compact-toolbar) {
     overflow: visible;
+}
+
+.stream-select-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin: 12px 0;
+}
+
+.stream-select-row select {
+    min-height: 40px;
+    max-width: 70%;
+    background: var(--control-buttons-bg-color);
+    color: var(--text-color);
+    border: 1px solid var(--button-border-color);
+    border-radius: 8px;
+    padding: 4px 8px;
+}
+
+.stream-source-info,
+.stream-codec-status {
+    display: block;
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+.stream-fullscreen .modal-body {
+    position: relative;
+}
+
+.device-view.stream-view-rotated {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%) rotate(90deg);
+    --stream-safe-left: env(safe-area-inset-bottom, 0px);
+    --stream-safe-right: env(safe-area-inset-top, 0px);
+    --stream-safe-top: env(safe-area-inset-left, 0px);
+    --stream-safe-bottom: env(safe-area-inset-right, 0px);
 }
 
 @media (max-width: 768px), (max-height: 500px) {

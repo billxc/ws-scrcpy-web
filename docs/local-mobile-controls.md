@@ -23,4 +23,12 @@ Safari's HEVC decode support caused MuMu's software `c2.android.hevc.encoder` to
 
 Quality stats now label target bitrate in Mbps and show its byte equivalent using bitrate / 8; measured input bytes remain separate.
 
+## Encoding choice and fixed fullscreen orientation
+
+More now provides Auto/H.264/H.265 selection, with per-device saved preferences. Browser-unsupported explicit codec choices report an inline error rather than silently switching. H.265 stream URLs cap maxSize at 1920 (1920×1080 on this 16:9 MuMu source), retaining lower explicit limits; H.264 retains its requested/original size. Actual codec and video dimensions are shown in More.
+
+Fullscreen orientation supports Auto, fixed portrait, and fixed landscape. This rotates the browser's whole stream view (video, touch layer, controls and menu), not Android. A mismatch with physical viewport orientation applies a 90-degree transform and swaps logical viewport bounds. Touch input inversely maps that transform to original video coordinates. Exiting fullscreen removes the transform. Preferences survive reconnect; physical resize is handled without changing encoder resolution.
+
+Validation: 37 focused tests and TypeScript; live HTTPS H.265 metadata/media at 1920×1080, switch back to H.264 2560×1440; mobile page-fullscreen rotation and controls at DPR 3; intercepted touch messages map to expected source coordinates and were not sent to Android; codec/orientation saved on server and retained on reopen. HEVC browser capability was simulated for Linux Chromium; actual H.265 decoding and native selectors on iPhone Safari remain for user acceptance.
+
 Local deployment and rollback details live outside Git at `/home/xiaochen/ai/ws-scrcpy-web-local/DEPLOYMENT.md`.

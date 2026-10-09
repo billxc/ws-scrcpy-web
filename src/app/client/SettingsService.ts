@@ -54,6 +54,11 @@ export interface StoredVideo {
     fit?: boolean | undefined;
 }
 
+export interface StreamPreferences {
+    codec?: 'auto' | 'h264' | 'h265';
+    orientation?: 'auto' | 'portrait' | 'landscape';
+}
+
 // Scope 'audio' is typed as Record<string,unknown> at the service boundary to
 // keep this module dependency-light (avoids importing AudioSettingsStore which
 // would create a cycle). Callers validate the shape before use.
@@ -184,6 +189,21 @@ export class SettingsService {
      */
     getDeviceAudio(udid: string): Record<string, unknown> | undefined {
         return this.deviceCache.get(this.keyFor(udid))?.['audio'] as Record<string, unknown> | undefined;
+    }
+
+    getDeviceStreamPreferences(udid: string): StreamPreferences {
+        return (this.deviceCache.get(this.keyFor(udid))?.['stream'] as StreamPreferences) ?? {};
+    }
+
+    setDeviceStreamPreferences(udid: string, patch: StreamPreferences): void {
+        const key = this.keyFor(udid);
+        const cur = this.deviceCache.get(key) ?? {};
+        const stream = { ...this.getDeviceStreamPreferences(udid), ...patch };
+        cur['stream'] = stream;
+        this.deviceCache.set(key, cur);
+        void this.sendDevicePatch(key, { stream }).catch((e) =>
+            console.error('[SettingsService] stream preferences PATCH failed', e),
+        );
     }
 
     /**

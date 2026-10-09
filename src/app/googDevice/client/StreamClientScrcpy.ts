@@ -36,6 +36,7 @@ import { ConfigureScrcpy } from './ConfigureScrcpy';
 import { chooseCodec, chooseCodecWithoutProbe } from './codecSelection';
 import { DeviceTracker } from './DeviceTracker';
 import { RollingWindow } from './RollingWindow';
+import { maxSizeForCodec, type StreamCodec } from './streamEncoding';
 
 type StartParams = {
     udid: string;
@@ -138,6 +139,8 @@ export class StreamClientScrcpy
     private static players: Map<string, PlayerClass> = new Map<string, PlayerClass>();
 
     private controlButtons?: HTMLElement | undefined;
+    private streamToolbar?: StreamToolbar;
+    private codecSelection = 'auto';
     private deviceName = '';
     private touchHandler?: FeaturedInteractionHandler | undefined;
     private uhidManager?: UhidManager | undefined;
@@ -265,6 +268,8 @@ export class StreamClientScrcpy
         const p = port || Number.parseInt(window.location.port, 10) || (secure ? 443 : 80);
         const url = new URL(`${protocol}://${host}:${p}/`);
         const vs = this.player?.getVideoSettings();
+        const requestedMaxSize = vs?.bounds ? Math.max(vs.bounds.width, vs.bounds.height) : 0;
+        const maxSize = maxSizeForCodec(this.params.videoCodec, requestedMaxSize);
         applyStreamParams(
             url,
             {
@@ -279,7 +284,7 @@ export class StreamClientScrcpy
                 ? {
                       bitrate: vs.bitrate,
                       maxFps: vs.maxFps,
-                      bounds: vs.bounds ? { width: vs.bounds.width, height: vs.bounds.height } : undefined,
+                      bounds: maxSize > 0 ? { width: maxSize, height: maxSize } : undefined,
                       displayId: vs.displayId,
                       iFrameInterval: vs.iFrameInterval,
                       codecOptions: vs.codecOptions,
@@ -329,6 +334,7 @@ export class StreamClientScrcpy
 
     public onMetadata = (meta: SessionMetadata): void => {
         this.deviceName = meta.deviceName;
+        this.streamToolbar?.setSourceInfo(meta.videoCodec, meta.screenWidth, meta.screenHeight);
         console.log(
             TAG,
             `Connected: ${meta.deviceName} ${meta.screenWidth}x${meta.screenHeight} video=${meta.videoCodec} audio=${meta.audioCodec}`,
@@ -372,6 +378,7 @@ export class StreamClientScrcpy
      */
     private onSessionChange = (change: { width: number; height: number }): void => {
         console.log(TAG, `Session resized: ${change.width}x${change.height}`);
+        this.streamToolbar?.setSourceInfo(this.params.videoCodec ?? 'h264', change.width, change.height);
         if (this.player && 'onSourceResize' in this.player) {
             (this.player as unknown as { onSourceResize(w: number, h: number): void }).onSourceResize(
                 change.width,
@@ -431,6 +438,12 @@ export class StreamClientScrcpy
         // ConfigureScrcpy.init / DeviceTracker handler) and self-sufficient on a
         // direct deep-link where no modal precedes startStream.
         await settingsService.hydrateDevice(udid);
+        const preferences = settingsService.getDeviceStreamPreferences(udid);
+        if (!this.params.videoCodec && preferences.codec && preferences.codec !== 'auto') {
+            this.params.videoCodec = preferences.codec;
+            this.params.encoderName = undefined;
+        }
+        this.codecSelection = this.params.videoCodec ?? 'auto';
 
         this.fitToScreen = fitToScreen;
         if (!player) {
@@ -464,7 +477,6 @@ export class StreamClientScrcpy
 
         const deviceView = document.createElement('div');
         deviceView.className = 'device-view';
-        let toolbar: StreamToolbar | undefined;
         const stop = (ev?: string | Event) => {
             if (ev && ev instanceof Event && ev.type === 'error') {
                 console.error(TAG, ev);
@@ -472,7 +484,7 @@ export class StreamClientScrcpy
             // Mark that the upcoming WebSocket close is user-initiated so
             // onDisconnected does not fire the public onErrorReceived hook.
             this.isStopping = true;
-            toolbar?.dispose();
+            this.streamToolbar?.dispose();
             const parent = deviceView.parentElement;
             if (parent) parent.removeChild(deviceView);
             this.setHandleKeyboardEvents(false);
@@ -510,10 +522,6 @@ export class StreamClientScrcpy
         const target = this.container ?? document.body;
         target.appendChild(deviceView);
         player.setVideoSettings(videoSettings, !!fitToScreen, false);
-        toolbar = new StreamToolbar(this.controlButtons, deviceView, player, (bitrate) => {
-            this.sendNewVideoSetting(new VideoSettings({ ...player.getVideoSettings().toJSON(), bitrate }));
-            this.refreshStream();
-        });
 
         // Resume audio on first user interaction (autoplay policy)
         const resumeAudio = () => {
@@ -553,6 +561,26 @@ export class StreamClientScrcpy
             }
         }
 
+        this.streamToolbar = new StreamToolbar(
+            this.controlButtons,
+            deviceView,
+            player,
+            (bitrate) => {
+                this.sendNewVideoSetting(new VideoSettings({ ...player.getVideoSettings().toJSON(), bitrate }));
+                this.refreshStream();
+            },
+            {
+                codec: this.codecSelection,
+                orientation: preferences.orientation ?? 'auto',
+                onCodecChange: async (codec) => {
+                    await this.changeCodec(codec);
+                    settingsService.setDeviceStreamPreferences(udid, { codec });
+                    this.refreshStream();
+                },
+                onOrientationChange: (orientation) => settingsService.setDeviceStreamPreferences(udid, { orientation }),
+            },
+        );
+
         // Connect via ScrcpyDemuxer
         const streamUrl = this.buildStreamUrl();
         this.demuxer = new ScrcpyDemuxer(streamUrl);
@@ -567,6 +595,19 @@ export class StreamClientScrcpy
         this.setHandleKeyboardEvents(true);
 
         console.log(TAG, player.getName(), udid);
+    }
+
+    private async changeCodec(codec: StreamCodec): Promise<void> {
+        const choice =
+            codec === 'auto'
+                ? await detectBestCodecAndEncoder(this.params.udid, this.params)
+                : { videoCodec: codec, encoderName: undefined };
+        if (!(await browserSupportsCodec(choice.videoCodec))) {
+            throw new Error(`浏览器不支持 ${choice.videoCodec.toUpperCase()} 解码，请选择其他编码方式。`);
+        }
+        this.params.videoCodec = choice.videoCodec;
+        this.params.encoderName = choice.encoderName;
+        this.codecSelection = codec;
     }
 
     public stopStream(): void {

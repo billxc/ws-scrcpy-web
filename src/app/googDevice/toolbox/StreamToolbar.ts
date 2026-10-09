@@ -1,5 +1,14 @@
 import '../../../style/mobile-stream.css';
 import type { BasePlayer } from '../../player/BasePlayer';
+import type { StreamCodec } from '../client/streamEncoding';
+import { StreamOrientation, type StreamOrientationMode } from './StreamOrientation';
+
+interface StreamToolbarOptions {
+    codec: string;
+    orientation: StreamOrientationMode;
+    onCodecChange: (codec: StreamCodec) => Promise<void>;
+    onOrientationChange: (mode: StreamOrientationMode) => void;
+}
 
 const NAVIGATION = new Map([
     ['Back', '返回'],
@@ -18,13 +27,17 @@ export class StreamToolbar {
     private readonly fullscreenTarget: HTMLElement;
     private readonly dialog: HTMLDialogElement | null;
     private readonly headerButtons: HTMLButtonElement[] = [];
+    private readonly sourceInfo = document.createElement('output');
+    private readonly orientation: StreamOrientation;
 
     constructor(
         holder: HTMLElement,
         deviceView: HTMLElement,
         player: BasePlayer,
         applyBitrate: (bitrate: number) => void,
+        options?: StreamToolbarOptions,
     ) {
+        this.orientation = new StreamOrientation(deviceView, options?.orientation ?? 'auto');
         holder.classList.add('compact-toolbar');
         const existing = Array.from(holder.children) as HTMLElement[];
         const navigation = document.createElement('div');
@@ -45,12 +58,74 @@ export class StreamToolbar {
         this.panel.className = 'stream-more-panel';
         this.panel.hidden = true;
         this.panel.setAttribute('aria-label', '更多控制');
+        this.panel.addEventListener('keydown', (event) => event.stopPropagation());
+        this.panel.addEventListener('keyup', (event) => event.stopPropagation());
         this.dialog = deviceView.closest<HTMLDialogElement>('dialog.connect-modal');
         this.fullscreenTarget = deviceView.closest<HTMLElement>('.modal-frame') ?? deviceView;
         this.fullscreenButton.className = 'stream-menu-action';
         this.fullscreenButton.textContent = '全屏';
         this.fullscreenButton.onclick = () => void this.toggleFullscreen();
         this.panel.appendChild(this.fullscreenButton);
+
+        const direction = document.createElement('label');
+        direction.className = 'stream-select-row';
+        direction.append('旋转屏幕');
+        const orientationSelect = document.createElement('select');
+        orientationSelect.setAttribute('aria-label', '旋转屏幕');
+        for (const [value, text] of [
+            ['auto', '自动'],
+            ['portrait', '固定竖屏'],
+            ['landscape', '固定横屏'],
+        ]) {
+            const option = document.createElement('option');
+            option.value = value!;
+            option.textContent = text!;
+            orientationSelect.appendChild(option);
+        }
+        orientationSelect.value = options?.orientation ?? 'auto';
+        orientationSelect.onchange = () => {
+            const mode = orientationSelect.value as StreamOrientationMode;
+            this.orientation.setMode(mode);
+            options?.onOrientationChange(mode);
+        };
+        direction.appendChild(orientationSelect);
+        this.panel.appendChild(direction);
+
+        const encoding = document.createElement('label');
+        encoding.className = 'stream-select-row';
+        encoding.append('编码方式');
+        const codecSelect = document.createElement('select');
+        codecSelect.setAttribute('aria-label', '编码方式');
+        for (const [value, text] of [
+            ['auto', '自动'],
+            ['h264', 'H.264'],
+            ['h265', 'H.265 · 最高 1080p'],
+        ]) {
+            const option = document.createElement('option');
+            option.value = value!;
+            option.textContent = text!;
+            codecSelect.appendChild(option);
+        }
+        codecSelect.value = options?.codec ?? 'auto';
+        let selectedCodec = codecSelect.value;
+        const codecStatus = document.createElement('small');
+        codecStatus.className = 'stream-codec-status';
+        codecSelect.onchange = async () => {
+            codecSelect.disabled = true;
+            codecStatus.textContent = '';
+            try {
+                await options?.onCodecChange(codecSelect.value as StreamCodec);
+                selectedCodec = codecSelect.value;
+            } catch (error) {
+                codecSelect.value = selectedCodec;
+                codecStatus.textContent = (error as Error).message;
+            } finally {
+                codecSelect.disabled = false;
+            }
+        };
+        encoding.appendChild(codecSelect);
+        this.sourceInfo.className = 'stream-source-info';
+        this.panel.append(encoding, codecStatus, this.sourceInfo);
 
         const quality = document.createElement('form');
         quality.className = 'stream-quality';
@@ -132,6 +207,10 @@ export class StreamToolbar {
         document.addEventListener('fullscreenchange', this.onFullscreenChange);
     }
 
+    public setSourceInfo(codec: string, width: number, height: number): void {
+        this.sourceInfo.textContent = `实际视频：${codec.toUpperCase()} · ${width}×${height}`;
+    }
+
     private setMenuOpen(open: boolean): void {
         this.panel.hidden = !open;
         this.more.setAttribute('aria-expanded', String(open));
@@ -147,6 +226,7 @@ export class StreamToolbar {
         this.fullscreenTarget.classList.toggle('stream-fullscreen', active);
         this.dialog?.classList.toggle('stream-expanded', active);
         this.fullscreenButton.textContent = active ? '退出全屏' : '全屏';
+        this.orientation.setFullscreen(active);
     }
 
     private readonly onFullscreenChange = (): void => {
@@ -174,6 +254,7 @@ export class StreamToolbar {
         document.removeEventListener('fullscreenchange', this.onFullscreenChange);
         if (document.fullscreenElement === this.fullscreenTarget) void document.exitFullscreen();
         this.setFullscreen(false);
+        this.orientation.dispose();
         this.headerButtons.forEach((button) => button.remove());
     }
 }

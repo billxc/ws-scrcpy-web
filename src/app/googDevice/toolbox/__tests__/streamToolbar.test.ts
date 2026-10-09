@@ -50,7 +50,7 @@ describe('compact stream toolbar', () => {
         )!;
         preset.click();
         expect(apply).toHaveBeenCalledWith(500_000);
-        expect(holder.querySelector('output')!.textContent).toContain('3.8 MB/分钟');
+        expect(holder.querySelector('.stream-quality output')!.textContent).toContain('3.8 MB/分钟');
         expect(dialog.querySelector('.stream-header-action:last-child')?.textContent ?? dialog.textContent).toContain(
             '0.5 Mbps',
         );
