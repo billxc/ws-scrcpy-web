@@ -35,9 +35,9 @@ export function encoderMatchesCodec(encoderName: string, codec: string): boolean
 /**
  * Preference order for automatic selection.
  *
- * H.265 → H.264 → AV1 is unchanged and stays first: those are the codecs with
- * broad hardware encode and browser decode support, and they are what the vast
- * majority of devices should end up on.
+ * Hardware H.265 stays first. Devices with only software H.265 prefer H.264:
+ * MuMu advertises c2.android.hevc.encoder, but high-resolution encoding fails
+ * and scrcpy silently falls back to 512x288.
  *
  * VP8/VP9 sit at the tail deliberately. They were added for devices that ship
  * no H.264/H.265/AV1 encoder at all, but automatic selection never considered
@@ -47,6 +47,14 @@ export function encoderMatchesCodec(encoderName: string, codec: string): boolean
  * device reaching the tail has already failed every entry ahead of it.
  */
 export const CODEC_PREFERENCE: readonly string[] = ['h265', 'h264', 'av1', 'vp8', 'vp9'];
+const SOFTWARE_CODEC_PREFERENCE: readonly string[] = ['h264', 'h265', 'av1', 'vp8', 'vp9'];
+
+export function codecPreferenceForEncoders(videoEncoders: readonly string[]): readonly string[] {
+    const hardwareHevc = videoEncoders.some(
+        (encoder) => encoderMatchesCodec(encoder, 'h265') && !isSoftwareEncoder(encoder),
+    );
+    return hardwareHevc ? CODEC_PREFERENCE : SOFTWARE_CODEC_PREFERENCE;
+}
 
 /**
  * Last resort when no codec in the preference order is usable.
@@ -107,7 +115,7 @@ export async function chooseCodec(
     canDecode: (codec: string) => Promise<boolean>,
     log: (message: string) => void = () => {},
 ): Promise<CodecChoice> {
-    for (const codec of CODEC_PREFERENCE) {
+    for (const codec of codecPreferenceForEncoders(videoEncoders)) {
         if (!deviceHasEncoderFor(videoEncoders, codec)) continue;
         if (!(await canDecode(codec))) {
             log(`Device has ${codec} encoder but browser cannot decode it`);
@@ -125,14 +133,13 @@ export async function chooseCodec(
  *
  * Browser support is the only signal available, so this is speculative for
  * every codec it can return; the device may not be able to encode the answer.
- * It walks the same preference order so the two paths cannot disagree about
- * what "preferred" means.
+ * Without evidence of a hardware HEVC encoder, prefer the broadly compatible H.264 path.
  */
 export async function chooseCodecWithoutProbe(
     canDecode: (codec: string) => Promise<boolean>,
     log: (message: string) => void = () => {},
 ): Promise<CodecChoice> {
-    for (const codec of CODEC_PREFERENCE) {
+    for (const codec of SOFTWARE_CODEC_PREFERENCE) {
         if (await canDecode(codec)) {
             log(`Auto-detected best codec (no probe): ${codec}`);
             return { videoCodec: codec };

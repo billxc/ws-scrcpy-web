@@ -506,7 +506,9 @@ export abstract class BasePlayer extends TypedEmitter<PlayerEvents> {
             newStats.push(`Encoder:     ${this.sessionEncoder}`);
         }
         if (this.videoSettings.bitrate) {
-            newStats.push(`Bitrate:     ${Util.prettyBytes(this.videoSettings.bitrate)}/s`);
+            newStats.push(
+                `Target rate: ${this.videoSettings.bitrate / 1_000_000} Mbps (${Util.prettyBytes(this.videoSettings.bitrate / 8)}/s)`,
+            );
         }
         // Per-frame stats
         if (this.perSecondQualityStats && this.momentumQualityStats) {

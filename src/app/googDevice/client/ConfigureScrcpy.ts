@@ -20,7 +20,11 @@ import { insecureOriginNotice, statusAfterProbe } from '../../secureContext';
 import Util from '../../Util';
 import { Modal } from '../../ui/Modal';
 import VideoSettings from '../../VideoSettings';
-import { CODEC_ENCODER_PATTERNS, encoderMatchesCodec as matchesCodec } from './codecSelection';
+import {
+    CODEC_ENCODER_PATTERNS,
+    codecPreferenceForEncoders,
+    encoderMatchesCodec as matchesCodec,
+} from './codecSelection';
 import type { DeviceTracker } from './DeviceTracker';
 import { StreamClientScrcpy } from './StreamClientScrcpy';
 
@@ -178,18 +182,6 @@ export class ConfigureScrcpy extends Modal {
         // Apply player video settings (may reset dropdowns from stored prefs)
         this.updateVideoSettingsForPlayer();
 
-        // Apply preferred codec/encoder defaults if stored settings didn't set them
-        if (this.videoCodecSelect) {
-            const currentCodec = this.videoCodecSelect.value;
-            if (!currentCodec || currentCodec === 'h264') {
-                const opts = Array.from(this.videoCodecSelect.options);
-                const hevcOpt = opts.find((o) => o.value === 'h265');
-                if (hevcOpt) {
-                    this.videoCodecSelect.selectedIndex = hevcOpt.index;
-                }
-                // H.264 stays as default if H.265 unavailable; AV1 is software-only and slow
-            }
-        }
         // Now that the codec is settled (stored prefs or default), filter encoders to match
         this.populateEncoderDropdown(this.videoCodecSelect?.value || '');
         if (this.encoderSelectElement) {
@@ -260,7 +252,7 @@ export class ConfigureScrcpy extends Modal {
      * selection again.
      */
     private detectVideoCodecs(encoders: string[]): string[] {
-        const codecs = ['h264', 'h265', 'av1', 'vp8', 'vp9'].filter((codec) =>
+        const codecs = codecPreferenceForEncoders(encoders).filter((codec) =>
             encoders.some((e) => matchesCodec(e, codec)),
         );
         // A device that reported nothing usable still gets the default offered,

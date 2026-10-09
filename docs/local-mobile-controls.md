@@ -17,4 +17,10 @@ The upstream Vitest default setup failed before collecting tests in this environ
 
 Fit-to-screen now only controls browser presentation; it no longer overwrites encoder bounds with viewport dimensions. ConnectModal ignores legacy viewport-derived stored bounds when fit is on, while explicit bounds with fit off and the public API's maxSize remain supported. Verified on a 390×844 browser viewport: source canvas is 2560×1440, and reconnect URLs contain no maxSize. This does not guarantee a sharp moving picture at very low bitrate.
 
+## Temporary H.264 preference
+
+Safari's HEVC decode support caused MuMu's software `c2.android.hevc.encoder` to be selected. With no size limit, its full-resolution configuration fails and scrcpy applies codec constraints, yielding 512×288. MuMu's APEX media-codecs XML advertises a 512×512 HEVC encoder limit. Auto selection and the configuration dropdown now prefer H.264 unless a hardware HEVC encoder is available. Manual codec choice remains available. This is a temporary workaround, not a repaired HEVC encoder.
+
+Quality stats now label target bitrate in Mbps and show its byte equivalent using bitrate / 8; measured input bytes remain separate.
+
 Local deployment and rollback details live outside Git at `/home/xiaochen/ai/ws-scrcpy-web-local/DEPLOYMENT.md`.

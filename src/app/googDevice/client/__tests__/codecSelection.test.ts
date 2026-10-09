@@ -47,6 +47,16 @@ describe('chooseCodec', () => {
         expect(result.encoderName).toBe(HW_HEVC);
     });
 
+    it('prefers H.264 on MuMu even when Safari can decode software H.265', async () => {
+        const result = await chooseCodec([SW_AVC, 'c2.android.hevc.encoder'], decodesAll);
+        expect(result).toEqual({ videoCodec: 'h264', encoderName: SW_AVC });
+    });
+
+    it('still permits software H.265 when no H.264 encoder is available', async () => {
+        const result = await chooseCodec(['c2.android.hevc.encoder'], decodesAll);
+        expect(result.videoCodec).toBe('h265');
+    });
+
     it('selects vp8 on a device whose only encoder is vp8', async () => {
         const result = await chooseCodec([SW_VP8], decodesAll);
         expect(result.videoCodec).toBe('vp8');
