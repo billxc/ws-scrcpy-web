@@ -691,7 +691,7 @@ export class HttpServer extends TypedEmitter<HttpServerEvents> implements Servic
             // failure on one listener must not be able to take the other
             // down with it.
             attachListenErrorHandler(server, port, secure);
-            server.listen(port, () => {
+            server.listen(port, process.env['WS_SCRCPY_HOST'] || '127.0.0.1', () => {
                 Utils.printListeningMsg(proto, port, PATHNAME);
                 if (secure) {
                     // Record the port actually bound, not just the
