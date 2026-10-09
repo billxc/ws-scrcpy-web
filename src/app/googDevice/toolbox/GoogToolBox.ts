@@ -63,7 +63,7 @@ export class GoogToolBox extends ToolBox {
                 return;
             }
             const { code } = element.optional;
-            const action = type === 'mousedown' ? KeyEvent.ACTION_DOWN : KeyEvent.ACTION_UP;
+            const action = type === 'pointerdown' ? KeyEvent.ACTION_DOWN : KeyEvent.ACTION_UP;
             const event = new KeyCodeControlMessage(action, code, 0, 0);
             client.sendMessage(event);
         };
@@ -71,8 +71,12 @@ export class GoogToolBox extends ToolBox {
             const button = new ToolBoxButton(item.title, item.icon, {
                 code: item.code,
             });
-            button.addEventListener('mousedown', handler);
-            button.addEventListener('mouseup', handler);
+            button.getElement().addEventListener('pointerdown', (event) => {
+                button.getElement().setPointerCapture(event.pointerId);
+            });
+            button.addEventListener('pointerdown', handler);
+            button.addEventListener('pointerup', handler);
+            button.addEventListener('pointercancel', handler);
             return button;
         });
         if (player.supportsScreenshot) {

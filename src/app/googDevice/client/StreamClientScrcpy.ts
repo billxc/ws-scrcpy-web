@@ -27,6 +27,7 @@ import VideoSettings from '../../VideoSettings';
 import DeviceMessage from '../DeviceMessage';
 import { type KeyEventListener, KeyInputHandler } from '../KeyInputHandler';
 import { GoogToolBox } from '../toolbox/GoogToolBox';
+import { StreamToolbar } from '../toolbox/StreamToolbar';
 import { UhidKeyboardHandler } from '../UhidKeyboardHandler';
 import { UhidManager } from '../UhidManager';
 import { UhidMouseHandler } from '../UhidMouseHandler';
@@ -463,6 +464,7 @@ export class StreamClientScrcpy
 
         const deviceView = document.createElement('div');
         deviceView.className = 'device-view';
+        let toolbar: StreamToolbar | undefined;
         const stop = (ev?: string | Event) => {
             if (ev && ev instanceof Event && ev.type === 'error') {
                 console.error(TAG, ev);
@@ -470,6 +472,7 @@ export class StreamClientScrcpy
             // Mark that the upcoming WebSocket close is user-initiated so
             // onDisconnected does not fire the public onErrorReceived hook.
             this.isStopping = true;
+            toolbar?.dispose();
             const parent = deviceView.parentElement;
             if (parent) parent.removeChild(deviceView);
             this.setHandleKeyboardEvents(false);
@@ -516,6 +519,10 @@ export class StreamClientScrcpy
             }
         }
         player.setVideoSettings(videoSettings, !!fitToScreen, false);
+        toolbar = new StreamToolbar(this.controlButtons, deviceView, player, (bitrate) => {
+            this.sendNewVideoSetting(new VideoSettings({ ...player.getVideoSettings().toJSON(), bitrate }));
+            this.refreshStream();
+        });
 
         // Resume audio on first user interaction (autoplay policy)
         const resumeAudio = () => {
