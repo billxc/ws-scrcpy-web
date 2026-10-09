@@ -509,15 +509,6 @@ export class StreamClientScrcpy
 
         const target = this.container ?? document.body;
         target.appendChild(deviceView);
-        if (fitToScreen) {
-            const newBounds = this.getMaxSize();
-            if (newBounds) {
-                videoSettings = new VideoSettings({
-                    ...videoSettings.toJSON(),
-                    bounds: newBounds,
-                });
-            }
-        }
         player.setVideoSettings(videoSettings, !!fitToScreen, false);
         toolbar = new StreamToolbar(this.controlButtons, deviceView, player, (bitrate) => {
             this.sendNewVideoSetting(new VideoSettings({ ...player.getVideoSettings().toJSON(), bitrate }));

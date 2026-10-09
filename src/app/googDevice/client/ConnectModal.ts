@@ -11,7 +11,7 @@ export class ConnectModal extends Modal {
     constructor(
         params: ParamsStreamScrcpy,
         _player: BasePlayer,
-        _fitToScreen: boolean,
+        fitToScreen: boolean,
         videoSettings: VideoSettings,
         deviceLabel: string,
         deviceKind?: 'phone' | 'tablet' | 'tv',
@@ -19,7 +19,8 @@ export class ConnectModal extends Modal {
         super({ title: deviceLabel });
         this.dialog.classList.add('connect-modal');
 
-        const bounds = videoSettings.bounds;
+        // Fit is a CSS display choice, not an encoder downscale. Ignore legacy viewport-derived bounds.
+        const bounds = fitToScreen ? null : videoSettings.bounds;
         const maxDim = bounds ? Math.max(bounds.width, bounds.height) : 0;
         const maxSize = maxDim > 0 ? maxDim : undefined;
 

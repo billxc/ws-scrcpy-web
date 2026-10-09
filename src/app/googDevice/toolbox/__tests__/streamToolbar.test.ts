@@ -56,6 +56,15 @@ describe('compact stream toolbar', () => {
         );
     });
 
+    it('accepts a custom bitrate below 0.25 Mbps', () => {
+        const { holder, apply } = build();
+        const input = holder.querySelector<HTMLInputElement>('input[type="number"]')!;
+        input.value = '0.1';
+        expect(input.checkValidity()).toBe(true);
+        holder.querySelector<HTMLFormElement>('form')!.requestSubmit();
+        expect(apply).toHaveBeenCalledWith(100_000);
+    });
+
     it('uses page fullscreen without the native API and can exit it', () => {
         const { holder, dialog } = build();
         const fullscreen = holder.querySelector<HTMLButtonElement>('.stream-menu-action')!;

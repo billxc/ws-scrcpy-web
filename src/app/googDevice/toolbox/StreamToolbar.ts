@@ -74,9 +74,9 @@ export class StreamToolbar {
         custom.className = 'stream-bitrate-custom';
         custom.append('自定义 Mbps');
         this.bitrate.type = 'number';
-        this.bitrate.min = '0.25';
+        this.bitrate.min = '0.000001';
         this.bitrate.max = '50';
-        this.bitrate.step = '0.25';
+        this.bitrate.step = 'any';
         this.bitrate.required = true;
         this.bitrate.inputMode = 'decimal';
         this.bitrate.setAttribute('aria-label', '视频码率 Mbps');
