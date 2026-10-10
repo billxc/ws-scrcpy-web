@@ -225,6 +225,7 @@ export class StreamToolbar {
     private setFullscreen(active: boolean): void {
         this.fullscreenTarget.classList.toggle('stream-fullscreen', active);
         this.dialog?.classList.toggle('stream-expanded', active);
+        document.documentElement.classList.toggle('stream-page-fullscreen', active);
         this.fullscreenButton.textContent = active ? '退出全屏' : '全屏';
         this.orientation.setFullscreen(active);
     }

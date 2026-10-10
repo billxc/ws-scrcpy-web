@@ -158,7 +158,9 @@
 
 /* The frame, not <dialog>, is the native fullscreen target: dialog itself cannot enter fullscreen. */
 dialog.connect-modal.stream-expanded {
+    position: fixed;
     inset: 0;
+    background: #000;
     margin: 0;
     width: 100vw;
     height: 100dvh;
@@ -225,6 +227,20 @@ dialog.connect-modal .modal-header-controls {
 dialog.connect-modal .modal-frame:has(.compact-toolbar),
 dialog.connect-modal .modal-body:has(.compact-toolbar) {
     overflow: visible;
+}
+
+/* Fullscreen is a clipped viewport, not the overflow-visible popup layout above. */
+dialog.connect-modal.stream-expanded,
+dialog.connect-modal.stream-expanded .modal-frame,
+dialog.connect-modal.stream-expanded .modal-body {
+    overflow: hidden;
+    overscroll-behavior: none;
+}
+
+html.stream-page-fullscreen,
+html.stream-page-fullscreen body {
+    overflow: hidden;
+    overscroll-behavior: none;
 }
 
 .stream-select-row {

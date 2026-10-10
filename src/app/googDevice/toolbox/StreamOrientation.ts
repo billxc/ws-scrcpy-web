@@ -5,8 +5,11 @@ export class StreamOrientation {
     private mode: StreamOrientationMode;
     private fullscreen = false;
     private readonly update = (): void => {
-        const width = window.innerWidth;
-        const height = window.innerHeight;
+        const viewport = this.fullscreen
+            ? this.view.closest<HTMLElement>('.stream-fullscreen')?.getBoundingClientRect()
+            : undefined;
+        const width = viewport?.width ?? window.innerWidth;
+        const height = viewport?.height ?? window.innerHeight;
         const rotate = this.fullscreen && this.mode !== 'auto' && (this.mode === 'landscape') !== width >= height;
         this.view.classList.toggle('stream-view-rotated', rotate);
         this.view.dataset['viewRotation'] = rotate ? '90' : '0';
@@ -22,6 +25,7 @@ export class StreamOrientation {
     ) {
         this.mode = mode;
         window.addEventListener('resize', this.update);
+        window.visualViewport?.addEventListener('resize', this.update);
     }
 
     public setMode(mode: StreamOrientationMode): void {
@@ -36,6 +40,7 @@ export class StreamOrientation {
 
     public dispose(): void {
         window.removeEventListener('resize', this.update);
+        window.visualViewport?.removeEventListener('resize', this.update);
         this.fullscreen = false;
         this.update();
     }

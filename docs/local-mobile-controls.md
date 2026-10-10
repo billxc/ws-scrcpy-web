@@ -31,4 +31,10 @@ Fullscreen orientation supports Auto, fixed portrait, and fixed landscape. This 
 
 Validation: 37 focused tests and TypeScript; live HTTPS H.265 metadata/media at 1920×1080, switch back to H.264 2560×1440; mobile page-fullscreen rotation and controls at DPR 3; intercepted touch messages map to expected source coordinates and were not sent to Android; codec/orientation saved on server and retained on reopen. HEVC browser capability was simulated for Linux Chromium; actual H.265 decoding and native selectors on iPhone Safari remain for user acceptance.
 
+## Fullscreen API and viewport containment
+
+Fullscreen calls `HTMLElement.requestFullscreen()` on the modal frame and exits with `document.exitFullscreen()`. The stream is canvas/WebCodecs, so no HTMLVideoElement `webkitEnterFullscreen()` is involved. When element fullscreen is unavailable/refused, CSS page fullscreen fills the viewport; Safari browser chrome may remain.
+
+Page fullscreen is now a fixed, opaque, overflow-clipped dialog/frame/body with background scrolling locked. Ordinary popup-mode overflow remains visible only outside fullscreen. Orientation uses the actual fullscreen frame bounds rather than `innerHeight`, and follows visual-viewport resize, avoiding disagreement with Safari dynamic viewport height. Validated via page-fullscreen fallback, scroll attempt, container-bound checks, rotation/touch regression and 38 focused tests. Real Safari viewport/chrome behavior remains for user acceptance.
+
 Local deployment and rollback details live outside Git at `/home/xiaochen/ai/ws-scrcpy-web-local/DEPLOYMENT.md`.
